@@ -1,0 +1,11 @@
+# Ignorar arquivos do sistema e pastas pesadas
+AppData/
+Local/
+Temp/
+node_modules/
+.expo/
+.git/
+android/
+ios/
+dist/
+web-build/
