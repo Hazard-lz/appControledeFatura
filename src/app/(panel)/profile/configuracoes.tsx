@@ -11,7 +11,7 @@ export default function Configuracoes() {
     const styles = getAuthStyles(colors);
 
     const [diaVencimento, setDiaVencimento] = useState('');
-    const [diaFechamento, setDiaFechamento] = useState(''); 
+    const [diaFechamento, setDiaFechamento] = useState('');
     const [loading, setLoading] = useState(false);
     const [userId, setUserId] = useState<string | null>(null);
 
@@ -23,13 +23,13 @@ export default function Configuracoes() {
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
             setUserId(user.id);
-            
+
             const { data } = await supabase
                 .from('profiles')
                 .select('dia_vencimento, dia_fechamento')
                 .eq('id', user.id)
                 .single();
-            
+
             if (data) {
                 setDiaVencimento(String(data.dia_vencimento || ''));
                 setDiaFechamento(String(data.dia_fechamento || ''));
@@ -37,9 +37,9 @@ export default function Configuracoes() {
         }
     };
 
-    // Função auxiliar para validar dias
+
     const validarDia = (texto: string) => {
-        // Remove tudo que não for número
+
         const numero = texto.replace(/[^0-9]/g, '');
         return numero;
     };
@@ -48,17 +48,17 @@ export default function Configuracoes() {
         const v = Number(diaVencimento);
         const f = Number(diaFechamento);
 
-        // --- VALIDAÇÃO DE SEGURANÇA ---
+
         if (v < 1 || v > 31 || f < 1 || f > 31) {
             Alert.alert('Erro', 'Por favor, insira dias válidos entre 1 e 31.');
             return;
         }
 
         setLoading(true);
-        
+
         const { error } = await supabase
             .from('profiles')
-            .update({ 
+            .update({
                 dia_vencimento: v,
                 dia_fechamento: f
             })
@@ -81,9 +81,9 @@ export default function Configuracoes() {
     };
 
     return (
-        <View style={[styles.container, {paddingTop: 40}]}>
+        <View style={[styles.container, { paddingTop: 40 }]}>
             <Text style={styles.title}>Configurações</Text>
-            
+
             <View style={styles.form}>
                 <Text style={styles.label}>Dia do Fechamento (Virada da Fatura)</Text>
                 <TextInput
@@ -95,7 +95,7 @@ export default function Configuracoes() {
                     maxLength={2}
                     placeholderTextColor={colors.tabIconDefault}
                 />
-                <Text style={{fontSize: 12, color: colors.placeholder, marginBottom: 15, marginTop: 5}}>
+                <Text style={{ fontSize: 12, color: colors.placeholder, marginBottom: 15, marginTop: 5 }}>
                     Dia em que sua fatura fecha para novas compras.
                 </Text>
 
@@ -109,7 +109,7 @@ export default function Configuracoes() {
                     maxLength={2}
                     placeholderTextColor={colors.tabIconDefault}
                 />
-                 <Text style={{fontSize: 12, color: colors.placeholder, marginBottom: 15, marginTop: 5}}>
+                <Text style={{ fontSize: 12, color: colors.placeholder, marginBottom: 15, marginTop: 5 }}>
                     Apenas informativo (exibido no Dashboard).
                 </Text>
             </View>
@@ -121,9 +121,9 @@ export default function Configuracoes() {
             </TouchableOpacity>
 
 
-            <View style={{height: 1, backgroundColor: '#ccc', marginVertical: 30, opacity: 0.5}} />
+            <View style={{ height: 1, backgroundColor: '#ccc', marginVertical: 30, opacity: 0.5 }} />
 
-            <TouchableOpacity style={[styles.button, {backgroundColor: '#ff4444', marginTop: 0}]} onPress={handleLogout}>
+            <TouchableOpacity style={[styles.button, { backgroundColor: '#ff4444', marginTop: 0 }]} onPress={handleLogout}>
                 <Text style={styles.buttonText}>SAIR DA CONTA</Text>
             </TouchableOpacity>
         </View>

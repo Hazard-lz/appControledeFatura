@@ -16,43 +16,41 @@ export default function Dashboard() {
     const [loading, setLoading] = useState(true);
     const [totalMes, setTotalMes] = useState(0);
     const [firstName, setFirstName] = useState('');
-    const [dadosGrafico, setDadosGrafico] = useState<{mes: number, total: number}[]>([]);
-    
-    // States visuais
+    const [dadosGrafico, setDadosGrafico] = useState<{ mes: number, total: number }[]>([]);
+
+
     const [nomeMesExibicao, setNomeMesExibicao] = useState('');
-    const [diaVencimentoDisplay, setDiaVencimentoDisplay] = useState(10); // Valor padrão inicial
+    const [diaVencimentoDisplay, setDiaVencimentoDisplay] = useState(10);
 
     const carregarDados = async () => {
         setLoading(true);
         const dataHoje = new Date();
-        let mesAtual = dataHoje.getMonth() + 1; // 1 a 12
+        let mesAtual = dataHoje.getMonth() + 1;
         let anoAtual = dataHoje.getFullYear();
 
-        // 1. Busca Usuário e Configurações
+
         const { data: { user } } = await supabase.auth.getUser();
+
+
+        let diaCorte = 25;
+
         if (user) {
-            // Pega o nome
             if (user.user_metadata?.full_name) {
                 setFirstName(user.user_metadata.full_name.split(' ')[0]);
             }
 
-            // BUSCA AMBOS: Fechamento (lógica) e Vencimento (visual)
             const { data: perfil } = await supabase
                 .from('profiles')
                 .select('dia_fechamento, dia_vencimento')
                 .eq('id', user.id)
                 .single();
-            
-            // Define padrões caso não tenha configurado ainda
-            const diaCorte = perfil?.dia_fechamento || 25;
+
+            diaCorte = perfil?.dia_fechamento || 25;
             const diaPagamento = perfil?.dia_vencimento || 10;
 
-            // Salva o dia do pagamento para mostrar na tela
             setDiaVencimentoDisplay(diaPagamento);
 
-            // A LÓGICA DE VIRADA (Usa o dia de fechamento)
-            // Se hoje (ex: 26) for MAIOR que o fechamento (ex: 25), 
-            // a fatura ativa já é a do mês que vem.
+
             if (dataHoje.getDate() > diaCorte) {
                 mesAtual++;
                 if (mesAtual > 12) {
@@ -62,21 +60,34 @@ export default function Dashboard() {
             }
         }
 
-        // 2. Define o Nome do Mês para Exibição (Visual)
+
         const dataNome = new Date(anoAtual, mesAtual - 1, 1);
         const nomeMes = dataNome.toLocaleDateString('pt-BR', { month: 'long' });
         const nomeMesFormatado = nomeMes.charAt(0).toUpperCase() + nomeMes.slice(1);
         setNomeMesExibicao(nomeMesFormatado);
 
-        // 3. Busca Faturas e Calcula
+
         const { data } = await supabase
             .from('faturas')
-            .select('*'); 
+            .select('*');
 
         if (data) {
-            // Calcula Total do Mês (Baseado no mesAtual ajustado pelo fechamento)
+
             const total = data.reduce((acc, curr) => {
-                const diff = (anoAtual - curr.ano) * 12 + (mesAtual - curr.mes);
+
+                let mesCompra = curr.mes;
+                let anoCompra = curr.ano;
+
+
+                if (curr.dia && curr.dia > diaCorte) {
+                    mesCompra++;
+                    if (mesCompra > 12) {
+                        mesCompra = 1;
+                        anoCompra++;
+                    }
+                }
+
+                const diff = (anoAtual - anoCompra) * 12 + (mesAtual - mesCompra);
                 const parcelaAtual = diff + 1;
 
                 if (parcelaAtual > 0 && parcelaAtual <= (curr.total_parcela || 1)) {
@@ -84,22 +95,34 @@ export default function Dashboard() {
                 }
                 return acc;
             }, 0);
-            
+
             setTotalMes(total);
 
-            // Monta Gráfico (Últimos 6 meses baseados no mês ajustado)
+
             const historico = [];
-            for (let i = 5; i >= 0; i--) { 
+            for (let i = 5; i >= 0; i--) {
                 let mesGrafico = mesAtual - i;
                 let anoGrafico = anoAtual;
-                
+
                 if (mesGrafico <= 0) {
                     mesGrafico += 12;
                     anoGrafico--;
                 }
 
                 const totalDoMes = data.reduce((acc, curr) => {
-                    const diff = (anoGrafico - curr.ano) * 12 + (mesGrafico - curr.mes);
+
+                    let mesCompra = curr.mes;
+                    let anoCompra = curr.ano;
+
+                    if (curr.dia && curr.dia > diaCorte) {
+                        mesCompra++;
+                        if (mesCompra > 12) {
+                            mesCompra = 1;
+                            anoCompra++;
+                        }
+                    }
+
+                    const diff = (anoGrafico - anoCompra) * 12 + (mesGrafico - mesCompra);
                     const p = diff + 1;
                     if (p > 0 && p <= (curr.total_parcela || 1)) return acc + Number(curr.valor);
                     return acc;
@@ -109,7 +132,7 @@ export default function Dashboard() {
             }
             setDadosGrafico(historico);
         }
-        
+
         setLoading(false);
     };
 
@@ -119,8 +142,8 @@ export default function Dashboard() {
 
     return (
         <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 60 }}>
-            
-            {/* CABEÇALHO */}
+
+
             <View style={styles.headerRow}>
                 <View>
                     <Text style={styles.greeting}>
@@ -131,7 +154,7 @@ export default function Dashboard() {
                     </Text>
                 </View>
 
-                <TouchableOpacity 
+                <TouchableOpacity
                     onPress={() => router.push('/(panel)/profile/configuracoes')}
                     style={styles.settingsButton}
                 >
@@ -139,33 +162,33 @@ export default function Dashboard() {
                 </TouchableOpacity>
             </View>
 
-            {/* Card Principal */}
+
             <View style={styles.cardHighlight}>
                 <Link href="/(panel)/profile/fatura-estimada">
-                    {/* Exibe o nome do mês da fatura vigente */}
+
                     <Text style={styles.cardLabel}>Fatura Estimada ({nomeMesExibicao}) →</Text>
                 </Link>
-                
+
                 {loading ? <ActivityIndicator color="#FFF" /> : (
                     <View>
                         <Text style={styles.cardValue}>
                             {totalMes.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                         </Text>
-                        
-                        {/* Lembrete visual do Vencimento */}
-                        <Text style={{color: colors.placeholder, fontSize: 13, marginTop: 4, fontWeight: '500', alignSelf: 'center'}}>
+
+
+                        <Text style={{ color: colors.background, fontSize: 13, marginTop: 4, fontWeight: '500', alignSelf: 'center' }}>
                             Vence dia {diaVencimentoDisplay}
                         </Text>
                     </View>
                 )}
             </View>
-            
 
-            {/* Gráfico */}
+
+
             <Text style={styles.sectionTitle}>Histórico (Semestre)</Text>
             <View style={styles.chartContainer}>
                 {dadosGrafico.map((d) => {
-                    const height = d.total > 0 ? (d.total / 5000) * 100 : 5; 
+                    const height = d.total > 0 ? (d.total / 5000) * 100 : 5;
                     return (
                         <View key={d.mes} style={styles.barContainer}>
                             <View style={[styles.bar, { height: height > 100 ? 100 : height }]} />
@@ -175,7 +198,7 @@ export default function Dashboard() {
                 })}
             </View>
 
-            {/* Botões de Ação */}
+
             <View style={styles.actionContainer}>
                 <Link href="/(panel)/profile/faturas" asChild>
                     <TouchableOpacity style={styles.buttonOutline}>
@@ -183,7 +206,7 @@ export default function Dashboard() {
                     </TouchableOpacity>
                 </Link>
 
-                <TouchableOpacity 
+                <TouchableOpacity
                     style={styles.buttonPrimary}
                     onPress={() => router.push({ pathname: '/(panel)/profile/gerenciar-fatura', params: { mode: 'create' } })}
                 >

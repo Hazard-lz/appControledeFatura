@@ -16,11 +16,11 @@ export default function GerenciarFatura() {
 
     const [nome, setNome] = useState('');
     const [valor, setValor] = useState('');
-    
+
     const [dia, setDia] = useState('');
     const [mes, setMes] = useState('');
     const [ano, setAno] = useState('');
-    
+
     const [totalParcelas, setTotalParcelas] = useState('1');
     const [loading, setLoading] = useState(false);
 
@@ -40,7 +40,7 @@ export default function GerenciarFatura() {
         if (data) {
             setNome(data.nome);
             setValor(String(data.valor));
-            setDia(String(data.dia || '')); 
+            setDia(String(data.dia || ''));
             setMes(String(data.mes));
             setAno(String(data.ano));
             setTotalParcelas(String(data.total_parcela || 1));
@@ -60,11 +60,11 @@ export default function GerenciarFatura() {
             user_id: user?.id,
             nome,
             valor: parseFloat(valor.replace(',', '.')),
-            dia: Number(dia), 
-            mes: Number(mes), 
-            ano: Number(ano), 
+            dia: Number(dia),
+            mes: Number(mes),
+            ano: Number(ano),
             total_parcela: Number(totalParcelas) || 1,
-            parcelas_pagas: 0 
+            parcelas_pagas: 0
         };
 
         let error;
@@ -87,8 +87,8 @@ export default function GerenciarFatura() {
     const handleExcluir = async () => {
         Alert.alert('Excluir', 'Tem certeza?', [
             { text: 'Cancelar' },
-            { 
-                text: 'Excluir', style: 'destructive', 
+            {
+                text: 'Excluir', style: 'destructive',
                 onPress: async () => {
                     await supabase.from('faturas').delete().eq('id', idFatura);
                     router.back();
@@ -102,56 +102,56 @@ export default function GerenciarFatura() {
             <Text style={styles.title}>{mode === 'create' ? 'Nova Despesa' : 'Editar Despesa'}</Text>
 
             <View style={styles.form}>
-                <Text style={{color: colors.text, marginBottom: 5, fontWeight: 'bold'}}>Nome</Text>
-                <TextInput 
-                    style={styles.input} 
-                    placeholder="Ex: Almoço" 
+                <Text style={{ color: colors.text, marginBottom: 5, fontWeight: 'bold' }}>Nome</Text>
+                <TextInput
+                    style={styles.input}
+                    placeholder="Ex: Almoço"
                     placeholderTextColor={colors.tabIconDefault}
-                    value={nome} onChangeText={setNome} 
-                />
-                
-                <Text style={{color: colors.text, marginBottom: 5, fontWeight: 'bold'}}>Valor da parcela</Text>
-                <TextInput 
-                    style={styles.input} 
-                    placeholder="Ex: 50.00" 
-                    keyboardType="numeric"
-                    placeholderTextColor={colors.tabIconDefault}
-                    value={valor} onChangeText={setValor} 
+                    value={nome} onChangeText={setNome}
                 />
 
-                <Text style={{color: colors.text, marginBottom: 5, fontWeight: 'bold'}}>Data da Compra (Dia / Mês / Ano)</Text>
+                <Text style={{ color: colors.text, marginBottom: 5, fontWeight: 'bold' }}>Valor da parcela</Text>
+                <TextInput
+                    style={styles.input}
+                    placeholder="Ex: 50.00"
+                    keyboardType="numeric"
+                    placeholderTextColor={colors.tabIconDefault}
+                    value={valor} onChangeText={setValor}
+                />
+
+                <Text style={{ color: colors.text, marginBottom: 5, fontWeight: 'bold' }}>Data da Compra (Dia / Mês / Ano)</Text>
                 <View style={styles.rowContainer}>
                     {/* INPUT DO DIA ADICIONADO AQUI */}
-                    <TextInput 
-                        style={[styles.input, styles.rowInput]} 
-                        placeholder="Dia" 
+                    <TextInput
+                        style={[styles.input, styles.rowInput]}
+                        placeholder="Dia"
                         keyboardType="numeric"
                         maxLength={2}
-                        value={dia} onChangeText={setDia} 
+                        value={dia} onChangeText={setDia}
                     />
-                    <TextInput 
-                        style={[styles.input, styles.rowInput]} 
-                        placeholder="Mês" 
+                    <TextInput
+                        style={[styles.input, styles.rowInput]}
+                        placeholder="Mês"
                         keyboardType="numeric"
                         maxLength={2}
-                        value={mes} onChangeText={setMes} 
+                        value={mes} onChangeText={setMes}
                     />
-                    <TextInput 
-                        style={[styles.input, styles.rowInput]} 
-                        placeholder="Ano" 
+                    <TextInput
+                        style={[styles.input, styles.rowInput]}
+                        placeholder="Ano"
                         keyboardType="numeric"
                         maxLength={4}
-                        value={ano} onChangeText={setAno} 
+                        value={ano} onChangeText={setAno}
                     />
                 </View>
 
-                <Text style={{color: colors.text, marginBottom: 5, fontWeight: 'bold'}}>Quantidade de Parcelas</Text>
-                <TextInput 
-                    style={styles.input} 
-                    placeholder="Ex: 1 (À vista)" 
+                <Text style={{ color: colors.text, marginBottom: 5, fontWeight: 'bold' }}>Quantidade de Parcelas</Text>
+                <TextInput
+                    style={styles.input}
+                    placeholder="Ex: 1 (À vista)"
                     keyboardType="numeric"
                     placeholderTextColor={colors.tabIconDefault}
-                    value={totalParcelas} onChangeText={setTotalParcelas} 
+                    value={totalParcelas} onChangeText={setTotalParcelas}
                 />
             </View>
 

@@ -5,7 +5,7 @@ import { ActivityIndicator, useColorScheme, View } from 'react-native';
 import { supabase } from '../lib/supabase';
 
 export default function RootLayout() {
-  
+
   const [session, setSession] = useState<any>(null);
   const [initialized, setInitialized] = useState(false);
 
@@ -32,11 +32,11 @@ export default function RootLayout() {
     if (!initialized) return;
 
     const inAuthGroup = segments[0] === '(auth)';
-    const inResetScreen = segments[1] === 'reset-password-confirm'; 
+    const inResetScreen = segments[1] === 'reset-password-confirm';
 
     if (session && inAuthGroup && !inResetScreen) {
       router.replace('/(panel)/profile/dashboard');
-    } 
+    }
     else if (!session && !inAuthGroup) {
       router.replace('/(auth)/signin/page');
     }
@@ -51,14 +51,14 @@ export default function RootLayout() {
   }
 
   return (
-    <Stack screenOptions={{ 
-      headerShown: true ,
+    <Stack screenOptions={{
+      headerShown: true,
       animation: 'slide_from_right',
       title: 'Controle de Fatura',
       headerStyle: {
         backgroundColor: colors.background
       },
-      headerTintColor : colors.tint 
+      headerTintColor: colors.tint
     }}>
       <Stack.Screen name="(auth)/signin/page" />
       <Stack.Screen name="(auth)/signup/page" />
