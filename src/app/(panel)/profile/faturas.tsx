@@ -15,31 +15,33 @@ export default function Faturas() {
     const [loading, setLoading] = useState(false);
     const [listaExibicao, setListaExibicao] = useState<any[]>([]);
 
-    // Filtros (Iniciam vazios ou com data atual, depende da sua preferencia. Vou por atual.)
-    const [mesFiltro, setMesFiltro] = useState(String(new Date().getMonth() + 1));
-    const [anoFiltro, setAnoFiltro] = useState(String(new Date().getFullYear()));
-    const [diaVencimentoUser, setDiaVencimentoUser] = useState(10); // Padrão
+    // Filtros
+    const [mesFiltro, setMesFiltro] = useState('');
+    const [anoFiltro, setAnoFiltro] = useState('');
+    
+    // Estado apenas para mostrar ao usuário qual mês o sistema está "pensando"
+    const [referenciaTexto, setReferenciaTexto] = useState('');
 
     const carregarDados = async () => {
         setLoading(true);
 
-        // 1. Busca Dia de Vencimento do Usuário
-        let diaCorte = 10; // Valor padrão
+        // 1. Busca Dia de FECHAMENTO do Usuário
+        let diaFechamento = 25; // Valor padrão se não achar
         const { data: { user } } = await supabase.auth.getUser();
         
         if (user) {
+            // CORREÇÃO: Buscando dia_fechamento
             const { data: perfil } = await supabase
                 .from('profiles')
-                .select('dia_vencimento')
+                .select('dia_fechamento')
                 .eq('id', user.id)
                 .single();
-            if (perfil?.dia_vencimento) {
-                diaCorte = perfil.dia_vencimento;
-                setDiaVencimentoUser(diaCorte);
+            if (perfil?.dia_fechamento) {
+                diaFechamento = perfil.dia_fechamento;
             }
         }
 
-        // 2. Busca TODAS as faturas
+        // 2. Busca TODAS as faturas ordenadas
         const { data, error } = await supabase
             .from('faturas')
             .select('*')
@@ -50,32 +52,38 @@ export default function Faturas() {
             return;
         }
 
-        // 3. Lógica de "Virada de Fatura"
-        const faturasCalculadas = data.map((item) => {
-            const hoje = new Date();
-            let mesRef, anoRef;
+        // 3. Define a Data de Referência (Onde a mágica acontece)
+        const hoje = new Date();
+        let mesRef, anoRef;
 
-            // SE TEM FILTRO: Usa o filtro
-            if (mesFiltro && anoFiltro) {
-                mesRef = Number(mesFiltro);
-                anoRef = Number(anoFiltro);
-            } 
-            // SE NÃO TEM FILTRO (Modo Atual): Aplica a regra do dia de vencimento
-            else {
-                mesRef = hoje.getMonth() + 1;
-                anoRef = hoje.getFullYear();
+        // Se o usuário digitou filtro, usa o filtro
+        if (mesFiltro && anoFiltro) {
+            mesRef = Number(mesFiltro);
+            anoRef = Number(anoFiltro);
+            setReferenciaTexto(`Filtro: ${mesRef}/${anoRef}`);
+        } 
+        // Se não, usa a data atual ajustada pelo fechamento
+        else {
+            mesRef = hoje.getMonth() + 1;
+            anoRef = hoje.getFullYear();
 
-                // A MÁGICA: Se hoje passou do dia de corte, o app mostra a fatura do mês que vem
-                if (hoje.getDate() >= diaCorte) {
-                    mesRef++;
-                    if (mesRef > 12) {
-                        mesRef = 1;
-                        anoRef++;
-                    }
+            // LÓGICA DE CORTE: Se hoje > Fechamento, avança o mês
+            if (hoje.getDate() > diaFechamento) {
+                mesRef++;
+                if (mesRef > 12) {
+                    mesRef = 1;
+                    anoRef++;
                 }
             }
+            
+            // Texto para exibir na tela
+            const dataNome = new Date(anoRef, mesRef - 1, 1);
+            const nomeMes = dataNome.toLocaleDateString('pt-BR', { month: 'long' });
+            setReferenciaTexto(`Mês Atual (Vigente): ${nomeMes}/${anoRef}`);
+        }
 
-            // Cálculo da parcela com base no MesRef ajustado
+        // 4. Calcula as parcelas com base no MesRef definido acima
+        const faturasCalculadas = data.map((item) => {
             const diff = (anoRef - item.ano) * 12 + (mesRef - item.mes);
             const parcelaAtual = diff + 1;
 
@@ -86,9 +94,15 @@ export default function Faturas() {
             };
         });
 
-        // 4. Aplica o Filtro Visual
+        // 5. APLICA O FILTRO VISUAL (MUDEI AQUI)
+        // Agora: Se você digitar um mês, ele ESCONDE o que não é daquele mês.
         const listaFinal = faturasCalculadas.filter(item => {
-            if (mesFiltro === '' || anoFiltro === '') return true; 
+            // Se NÃO tem filtro digitado, mostra tudo (Histórico completo)
+            if (mesFiltro === '' && anoFiltro === '') {
+                return true; 
+            }
+            
+            // Se TEM filtro, mostra SÓ o que está "ATIVA" (ou seja, o que cobra na fatura daquele mês)
             return item.status_calculado === 'ATIVA';
         });
 
@@ -96,38 +110,48 @@ export default function Faturas() {
         setLoading(false);
     };
 
+    // Recarrega sempre que a tela ganha foco ou os filtros mudam
     useFocusEffect(useCallback(() => {
         carregarDados();
     }, [mesFiltro, anoFiltro]));
 
-    // Função para limpar filtros
     const limparFiltros = () => {
         setMesFiltro('');
         setAnoFiltro('');
     };
 
     const renderItem = ({ item }: { item: any }) => {
-        // Se filtro estiver limpo, mostra informação genérica ou a atual
-        const textoParcela = item.status_calculado === 'ATIVA'
-            ? `Parcela ${item.parcela_exibicao}/${item.total_parcela}`
-            : (item.parcela_exibicao > item.total_parcela ? 'Finalizada' : 'Agendada');
+        // Lógica de Texto da Parcela
+        let textoParcela = '';
+        let corParcela = colors.text;
+
+        if (item.status_calculado === 'ATIVA') {
+            textoParcela = `Parcela ${item.parcela_exibicao}/${item.total_parcela}`;
+            corParcela = '#228B22'; // Verde (Ativa no mês referência)
+        } else if (item.parcela_exibicao > item.total_parcela) {
+            textoParcela = 'Finalizada';
+            corParcela = colors.placeholder;
+        } else {
+            textoParcela = 'Agendada (Futura)';
+            corParcela = '#FFA500'; // Laranja
+        }
 
         return (
             <TouchableOpacity
-                style={[styles.itemCard, item.status_calculado !== 'ATIVA' && { opacity: 0.6 }]} // Opacidade se não for do mês
+                style={[styles.itemCard, item.status_calculado !== 'ATIVA' && { opacity: 0.7 }]}
                 onPress={() => router.push({ pathname: '/(panel)/profile/gerenciar-fatura', params: { id: item.id, mode: 'edit' } })}
             >
                 <View>
                     <Text style={styles.itemTitle}>{item.nome}</Text>
-                    <Text style={{ fontSize: 15, color: colors.placeholder, paddingTop: 2 }}>
-                        {item.dia ? `${item.dia}/` : ''}{item.mes}/{item.ano}
+                    <Text style={{ fontSize: 14, color: colors.placeholder, paddingTop: 2 }}>
+                        Compra: {item.dia ? `${item.dia}/` : ''}{item.mes}/{item.ano}
                     </Text>
                 </View>
                 <View style={{ alignItems: 'flex-end' }}>
                     <Text style={styles.itemValue}>
                         R$ {Number(item.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </Text>
-                    <Text style={{ fontSize: 15, color: colors.placeholder, paddingTop: 2 }}>
+                    <Text style={{ fontSize: 14, color: corParcela, fontWeight: '500', paddingTop: 2 }}>
                         {textoParcela}
                     </Text>
                 </View>
@@ -138,7 +162,7 @@ export default function Faturas() {
     return (
         <View style={styles.container}>
             <View style={styles.header}>
-                <Text style={styles.title}>Minhas Faturas</Text>
+                <Text style={styles.title}>Minhas Despesas</Text>
                 <TouchableOpacity onPress={() => router.push('/(panel)/profile/gerenciar-fatura')}>
                     <Ionicons name="add-circle" size={32} color={colors.tint} />
                 </TouchableOpacity>
@@ -150,19 +174,19 @@ export default function Faturas() {
                     style={styles.filterInput}
                     value={mesFiltro} onChangeText={setMesFiltro}
                     keyboardType="numeric" placeholder="Mês" placeholderTextColor={colors.placeholder}
+                    maxLength={2}
                 />
                 <TextInput
                     style={styles.filterInput}
                     value={anoFiltro} onChangeText={setAnoFiltro}
                     keyboardType="numeric" placeholder="Ano" placeholderTextColor={colors.placeholder}
+                    maxLength={4}
                 />
 
-                {/* Botão de Buscar (Recarrega) */}
                 <TouchableOpacity style={styles.filterButton} onPress={carregarDados}>
-                    <Ionicons name="search" size={20} color={colors.background} backgroundColor={colors.tint} />
+                    <Ionicons name="search" size={20} color={colors.background} />
                 </TouchableOpacity>
 
-                {/* Botão de Limpar (X Vermelho) */}
                 {(mesFiltro !== '' || anoFiltro !== '') && (
                     <TouchableOpacity style={[styles.filterButton, { backgroundColor: '#ff4444' }]} onPress={limparFiltros}>
                         <Ionicons name="close" size={20} color="#FFF" />
@@ -170,12 +194,12 @@ export default function Faturas() {
                 )}
             </View>
 
-            {/* Aviso se filtro estiver limpo */}
-            {mesFiltro === '' && (
-                <Text style={{ textAlign: 'center', marginBottom: 10, color: colors.tabIconDefault, fontStyle: 'italic' }}>
-                    Exibindo histórico completo
+            {/* Aviso de Referência (Muito importante para entender a virada) */}
+            <View style={{paddingHorizontal: 20, marginBottom: 10}}>
+                <Text style={{ textAlign: 'center', color: colors.tint, fontWeight: '600', fontSize: 13 }}>
+                    {referenciaTexto}
                 </Text>
-            )}
+            </View>
 
             {loading ? <ActivityIndicator size="large" color={colors.tint} /> : (
                 <FlatList
@@ -183,7 +207,7 @@ export default function Faturas() {
                     keyExtractor={(item) => String(item.id)}
                     renderItem={renderItem}
                     contentContainerStyle={{ paddingBottom: 100 }}
-                    ListEmptyComponent={<Text style={styles.emptyText}>Nenhuma fatura encontrada.</Text>}
+                    ListEmptyComponent={<Text style={styles.emptyText}>Nenhuma despesa encontrada.</Text>}
                 />
             )}
         </View>

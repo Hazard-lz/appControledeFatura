@@ -110,7 +110,7 @@ export default function GerenciarFatura() {
                     value={nome} onChangeText={setNome} 
                 />
                 
-                <Text style={{color: colors.text, marginBottom: 5, fontWeight: 'bold'}}>Valor Total</Text>
+                <Text style={{color: colors.text, marginBottom: 5, fontWeight: 'bold'}}>Valor da parcela</Text>
                 <TextInput 
                     style={styles.input} 
                     placeholder="Ex: 50.00" 
