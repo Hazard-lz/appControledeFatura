@@ -1,2 +1,2 @@
-export const supaUrl = 'https://klvqatdmyaooxvtdpmnp.supabase.co';
-export const apiKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtsdnFhdGRteWFvb3h2dGRwbW5wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUwMzM3MTUsImV4cCI6MjA4MDYwOTcxNX0.kExHiW8zYuZpmaHj2eAggwXVdoO0wNPv5MXzs0i984I';
+export const supaUrl = process.env.EXPO_PUBLIC_SUPABASE_URL as string;
+export const apiKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY as string;

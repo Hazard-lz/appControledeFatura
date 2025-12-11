@@ -23,6 +23,7 @@ export default function Faturas() {
     const [referenciaTexto, setReferenciaTexto] = useState('');
 
     const carregarDados = async () => {
+        
         setLoading(true);
 
 
